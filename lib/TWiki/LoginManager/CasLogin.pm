@@ -36,7 +36,8 @@ methods of this class.
 =cut
 
 package TWiki::LoginManager::CasLogin;
-use base 'TWiki::LoginManager';
+use TWiki::LoginManager;
+our @ISA = qw( TWiki::LoginManager );
 
 use strict;
 use Assert;
