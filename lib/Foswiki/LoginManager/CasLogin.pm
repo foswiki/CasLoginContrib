@@ -134,7 +134,7 @@ sub forceAuthentication {
     my $this    = shift;
     my $session = $this->{session};
 
-    unless ( $session->inContext('authenticated') ) {
+    if ( !$session->inContext('authenticated') && !defined($query->param('ticket'))) {
         $session->redirect( $this->loginUrl(), 0 );
         return 1;
     }
