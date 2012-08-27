@@ -1,17 +1,10 @@
-%META:TOPICINFO{author="OlivierBerger" date="1219765248" format="1.1" reprev="1.4" version="1.4"}%
-<!--
-This topic is part of the documentation for CasLoginContrib and is
-automatically generated from Subversion. Do not edit it! Your edits
-will be lost the next time the topic is uploaded!
-
-If you want to report an error in the topic, please raise a report at
-http://develop.twiki.org/~twiki4/cgi-bin/view/Bugs/CasLoginContrib
--->
-
 ---+!! !CasLoginContrib
 <!--
 One line description, required for extensions repository catalog.
-   * Set SHORTDESCRIPTION = CAS login manager for TWiki
+BuildContrib will fill in the SHORTDESCRIPTION with the value of
+$SHORTDESCRIPTION from the .pm module, or you can redefine it here if you
+prefer.
+   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
 -->
 %SHORTDESCRIPTION%
 
@@ -19,53 +12,52 @@ One line description, required for extensions repository catalog.
 
 ---++ Usage
 
-This is a login manager for TWiki which allows integration in a [[Wikipedia:Central_Authentication_Service][CAS]] Single Sign On infrastructure.
+Uses JA-SIG [[Wikipedia:Central_Authentication_Service][CAS]] Single Sign On infrastructure for foswiki authentication.
 
-Once installed, it provides users with a "trip" to a CAS server to enter usernames and passwords when authentication is required in TWiki.
+If the user has already authenticated at the SSO, the user will not need to enter their password again.
 
-To activate it, you will specify =TWiki::LoginManager::CasLogin= (or =TWiki::Client::CasLogin= for TWiki 4.1.x) in the security setup section of [[%SCRIPTURL{"configure"}%][configure]]. 
+This Authentication infrastructure can be coupled together with an external User mapper such as Foswiki:Extensions.LdapContrib, allowing foswiki to 'outsource' its user details.
 
+To activate it, you will specify =Foswiki::LoginManager::CasLogin= in the security setup section of [[%SCRIPTURL{"configure"}%][configure]], and set the ={CAS}= specific settings.
 
----++ Examples
+---+++ Notes
+Don't forget to get get the CAS server's =https= =ssl= certificate, and add its path into =configure= : in the ={CAS}{CAFile}= setting.
 
-Configure the following variables to activate this Login manager :
+(the =cipher RC4-SHA= can be removed if you're not getting the problem described below)
 <verbatim>
-$TWiki::cfg{LoginManager} = 'TWiki::LoginManager::CasLogin'; # or 'TWiki::Client::CasLogin'; for TWiki 4.1.x
-$TWiki::cfg{CAS}{casUrl} = 'https://yourcas.yourdomain/cas';
-$TWiki::cfg{CAS}{CAFile} = '/etc/ssl/certs/your_CAS.pem';
+openssl  s_client -cipher RC4-SHA   -connect jasig.home.org.au:8443 2>&1 | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/ p' > ../foswiki/core/jasig.crt
 </verbatim>
 
-Should you wish to trace execution of Client/LoginManager, you may set also :
+---++++ OpenSSL issue
+
+If you get the following error, add =--sslv3= to the command line, and to the expert setting below
 <verbatim>
-$TWiki::cfg{Trace}{Client} = 1;
+sven@quiet:~/src/AuthCAS$ curl -I --insecure https://jasig.home.org.au:8443/login
+curl: (35) error:14077438:SSL routines:SSL23_GET_SERVER_HELLO:tlsv1 alert internal error
 </verbatim>
+
+If you successfully log into the CAS server, and then get returned to the foswiki with a url containing a =?ticket= parameter but are not logged in to foswiki, you may be hitting an OpenSSL issue due to your CAS server's cipher fallbacks. You bay be able to solve this by using the *EXPERT* setting found in =configure= :
+={CAS}{SSL_version}=. Set the value to =SSLv3=.
+
+
 
 ---++ Installation Instructions
 
 %$INSTALL_INSTRUCTIONS%
 
----++ Contrib Info
+---++ Info
 
-This initial attempt at packaging the <nop>CasLogin is based on work done
-by Main.CharlieReitsma (See Codev.CasLogin), modified by
-Main.OlivierBerger to work with TWiki 4.1.2, and assembled into a
-Contrib package.
+This is a re-write of the TWiki CASLogin work done by Greg Abbas, Charlie Reitsma and Olivier Berger, and uses Olivier Salaun's =AuthCAS= cpan module.
 
-You'll find the original version of Main.CharlieReitsma meant for TWiki 4.2 in Codev.CasLogin.
-
-|  Contrib Author(s): | Main.CharlieReitsma, Main.OlivierBerger |
-|  Copyright: | &copy; Greg Abbas, Charlie Reitsma, Olivier Berger |
-|  License: | [[http://www.gnu.org/licenses/gpl.html][GPL (Gnu General Public License)]] |
-|  Contrib Version: | %$VERSION% |
+|  Author(s): | Foswiki:Main.SvenDowideit |
+|  Copyright: | &copy; SvenDowideit@fosiki.com |
+|  License: | [[http://www.gnu.org/licenses/gpl.html][GPL 3 (Gnu General Public License)]] |
+   Aug 2012 | initial release of the  third re-implementation |
+|  Release: | %$RELEASE% |
+|  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  v. 0.%$VERSION% | Updating documentation, adding Config.spec, managing Contrib sources in SVN. |
-|  v. 2 (20080815) | Adding <nop>TWiki::LoginManager::CasLogin for TWiki 4.2 to ship both versions at the same time. |
-|  v. 1 (20080814) | Initial release with <nop>TWiki::Client::CasLogin, only for TWiki 4.1.2. |
 |  Dependencies: | %$DEPENDENCIES% |
-|  Contrib Home: | http://twiki.org/cgi-bin/view/Plugins/CasLoginContrib |
-|  Feedback: | http://twiki.org/cgi-bin/view/Plugins/CasLoginContribDev |
-|  Appraisal: | http://twiki.org/cgi-bin/view/Plugins/CasLoginContribAppraisal |
+|  Home page: | http://foswiki.org/bin/view/Extensions/CasLoginContrib |
+|  Support: | http://foswiki.org/bin/view/Support/CasLoginContrib |
 
-__Related Topics:__ [[%SYSTEMWEB%.Contribs][Contribs]], %SYSTEMWEB%.DeveloperDocumentationCategory, %SYSTEMWEB%.AdminDocumentationCategory, %SYSTEMWEB%.DefaultPreferences, %USERSWEB%.SitePreferences
-
-<!-- Do _not_ attempt to edit this topic; it is auto-generated. Please add comments/questions/remarks to the feedback topic on twiki.org instead. -->
+<!-- Do _not_ attempt to edit this topic; it is auto-generated. -->

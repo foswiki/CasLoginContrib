@@ -1,18 +1,10 @@
-# Module of Foswiki - The Free and Open Source Wiki, http://foswiki.org/
+# Module of Foswiki Collaboration Platform, http://Foswiki.org/
 #
-# Copyright (C) 2005-2006 TWiki Contributors.
-# All Rights Reserved. TWiki Contributors
-# are listed in the AUTHORS file in the root of this distribution.
-# NOTE: Please extend that file, not this notice.
-#
-# Additional copyrights apply to some or all of the code in this
-# file as follows:
-# Copyright (C) 2005 Greg Abbas, twiki@abbas.org
-# Copyright (C) 2008 Charlie Reitsma, reitsma@denison.edu
+# Copyright (C) 2012 Sven Dowideit, SvenDowideit@fosiki.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
+# as published by the Free Software Foundation; either version 3
 # of the License, or (at your option) any later version. For
 # more details read LICENSE in the root of this distribution.
 #
@@ -24,46 +16,114 @@
 
 =pod
 
----+ package TWiki::LoginManager::CasLogin
+---+ package Foswiki::LoginManager::CasLogin
 
-This is a login manager that you can specify in the security setup section of
-[[%SCRIPTURL{"configure"}%][configure]]. It provides users with a trip to
-the CAS server to enter usernames and passwords.
-
-Subclass of TWiki::LoginManager; see that class for documentation of the
-methods of this class.
+The CasLogin class uses the CAS SSO to auto-login into Foswiki
 
 =cut
 
-package TWiki::LoginManager::CasLogin;
-use TWiki::LoginManager;
-our @ISA = qw( TWiki::LoginManager );
+package Foswiki::LoginManager::CasLogin;
 
 use strict;
 use Assert;
+use Foswiki::LoginManager::TemplateLogin;
+use Foswiki::Func;
 use AuthCAS;
 
-=pod
-
----++ ClassMethod new ($session, $impl)
-
-Construct the CasLogin object
-
-=cut
+@Foswiki::LoginManager::CasLogin::ISA =
+  ('Foswiki::LoginManager::TemplateLogin');
 
 sub new {
     my ( $class, $session ) = @_;
-    my $this = $class->SUPER::new($session);
+
+    my $this = bless( $class->SUPER::new($session), $class );
     $session->enterContext('can_login');
-    if ( $TWiki::cfg{Sessions}{ExpireCookiesAfter} ) {
-        $session->enterContext('can_remember_login');
-    }
+
+    $this->{CAS} = new AuthCAS(
+        casUrl      => $Foswiki::cfg{CAS}{casUrl},
+        CAFile      => $Foswiki::cfg{CAS}{CAFile},
+        SSL_version => $Foswiki::cfg{CAS}{SSL_version}
+    );
+
     return $this;
+}
+
+sub finish {
+    my $this = shift;
+
+    undef $this->{CAS};
+
+    $this->SUPER::finish();
+    return;
 }
 
 =pod
 
----++ ObjectMethod forceAuthentication () -> boolean
+---++ ObjectMethod loadSession()
+
+
+=cut
+
+sub loadSession {
+    my $this    = shift;
+    my $foswiki = $this->{session};
+    my $query   = $foswiki->{request};
+
+    my $ticket = $query->param('ticket');
+
+    ASSERT( $this->isa('Foswiki::LoginManager::CasLogin') ) if DEBUG;
+
+    if ( $query->param('logout') && $Foswiki::cfg{CAS}{LogoutFromCAS} ) {
+
+#can't redirect browser to logout from CAS, as the CAS server does not return to service URL
+#$foswiki->redirect($this->logoutUrl(), 0);
+        $this->{CAS}->callCAS( $this->logoutUrl() );
+    }
+
+# LoginManager::loadSession does a redirect on logout, so we have to deal with (CAS) logout before it.
+    my $authUser = $this->SUPER::loadSession();
+
+    #print STDERR "hello : $authUser\n";
+    #print STDERR "params: ".join(', ', $query->param())."\n";
+    #print STDERR "uri: ".Foswiki::Func::getUrlHost().$query->uri()."\n";
+    #check returned ticket
+    if ( defined($ticket) ) {
+        my $uri = Foswiki::Func::getUrlHost() . $query->uri();
+        $uri =~ s/[?;&]ticket=.*$//;
+        $authUser = $this->{CAS}->validateST( $uri, $ticket );
+
+        #        print STDERR "login? $authUser => $ticket\n";
+        #TODO: protect against auth as basemapper admin?
+
+       #if its an email address, we can make the generated wikiname more usefull
+        $authUser =~ s/(\.|@)(.)/$1.uc($2)/ge;
+        $authUser = ucfirst($authUser);
+
+        $this->userLoggedIn($authUser);
+        my $origurl = $query->param('foswiki_origin');
+    }
+    else {
+        if (   defined( $query->param('sudo') )
+            || defined( $query->param('logout') ) )
+        {
+
+            #sudo-ing, allow template auth
+            $authUser = $Foswiki::cfg{DefaultUserLogin};
+            $this->userLoggedIn($authUser);
+        }
+        else {
+            if ( $foswiki->inContext('login') ) {
+                $this->forceAuthentication();
+            }
+        }
+    }
+
+    return $authUser;
+}
+
+=begin TML
+
+---++ ObjectMethod forceAuthentication () -> $boolean
 
 method called when authentication is required - redirects to (...|view)auth
 Triggered on auth fail
@@ -71,102 +131,56 @@ Triggered on auth fail
 =cut
 
 sub forceAuthentication {
-    my $this  = shift;
-    my $twiki = $this->{twiki};
+    my $this    = shift;
+    my $session = $this->{session};
 
-    unless ( $twiki->inContext('authenticated') ) {
-        my $query = $twiki->{cgiQuery};
-
-        # Redirect with passthrough so we don't lose the original query params
-        my $twiki = $this->{twiki};
-        my $topic = $twiki->{topicName};
-        my $web   = $twiki->{webName};
-        my $url   = $twiki->getScriptUrl( 0, 'login', $web, $topic );
-        $query->param( -name => 'origurl', -value => $ENV{REQUEST_URI} );
-        $twiki->redirect( $url, 1 );
+    unless ( $session->inContext('authenticated') ) {
+        $session->redirect( $this->loginUrl(), 0 );
         return 1;
     }
-    return undef;
+    return 0;
 }
 
-=pod
+=begin TML
 
 ---++ ObjectMethod loginUrl () -> $loginUrl
 
-TODO: why is this not used internally? When is it called, and why
-Content of a login link
+over-ride the login url
 
 =cut
 
 sub loginUrl {
-    my $this  = shift;
-    my $twiki = $this->{twiki};
-    my $topic = $twiki->{topicName};
-    my $web   = $twiki->{webName};
-    return $twiki->getScriptUrl( 0, 'login', $web, $topic,
-        origurl => $ENV{REQUEST_URI} );
+    my $this = shift;
+
+    my $foswiki = $this->{session};
+    my $query   = $foswiki->{request};
+    my $uri     = Foswiki::Func::getUrlHost() . $query->uri();
+
+    #remove any urlparams, as they will be in the cachedQuery
+    $uri =~ s/\?.*$//;
+    return $this->{CAS}->getServerLoginURL(
+        Foswiki::urlEncode( $uri . $foswiki->cacheQuery() ) );
 }
 
-=pod
+=begin TML
 
----++ ObjectMethod login( $query, $twiki )
+---++ ObjectMethod logoutUrl () -> $loginUrl
 
-Redirect to CAS server to login. Successful login results in a
-username.
+can't over-ride the logout url yet, but will try to use it.
 
 =cut
 
-sub login {
-    my ( $this, $query, $twikiSession ) = @_;
-    my $twiki  = $this->{twiki};
-    my $casUrl = $TWiki::cfg{CAS}{casUrl};
-    my $CAFile = $TWiki::cfg{CAS}{CAFile};
-    my $cas    = new AuthCAS(
-        casUrl => $casUrl,
-        CAFile => $CAFile
-    );
+sub logoutUrl {
+    my $this = shift;
 
-    my $origurl  = $query->param('origurl');
-    my $app_url  = $TWiki::cfg{DefaultUrlHost};
-    my $remember = $query->param('remember');
-    my $ticket   = $query->param('ticket');
+    my $foswiki = $this->{session};
+    my $query   = $foswiki->{request};
+    my $uri     = Foswiki::Func::getUrlHost() . $query->uri();
 
-    # Eat these so there's no risk of accidental passthrough
-    $query->delete( 'origurl', 'ticket' );
-
-    my $cgisession = $this->{_cgisession};
-
-    $cgisession->param( 'REMEMBER', $remember ) if $cgisession;
-
-    my $error = '';
-
-    if ($ticket) {
-        my $validation = 1;
-        $origurl = $cgisession->param('my_orig');
-        $cgisession->clear( ['my_orig'] );
-
-        my $loginName = $cas->validateST( $app_url . $origurl, $ticket );
-        if ($loginName) {
-            $this->userLoggedIn($loginName);
-            $cgisession->param( 'VALIDATION', $validation ) if $cgisession;
-
-            #SUCCESS our user is authenticated..
-            $query->delete('sudo')
-              ; #remove the sudo param - its only to tell TemplateLogin that we're using BaseMapper..
-                # Redirect with passthrough
-            $twikiSession->redirect( $origurl, 1 );
-            return;
-        }
-    }
-    else {
-        $cgisession->param( 'my_orig', $origurl ) if $cgisession;
-        ###
-        ### Redirect the User for login at CAS server
-        ###
-        my $login_url = $cas->getServerLoginURL( $app_url . $origurl );
-        printf "Location: $login_url\n\n";
-        exit 0;
-    }
+    #remove any urlparams, as they will be in the cachedQuery
+    $uri =~ s/\?.*$//;
+    return $this->{CAS}->getServerLogoutURL(
+        Foswiki::urlEncode( $uri . $foswiki->cacheQuery() ) );
 }
 
 1;
