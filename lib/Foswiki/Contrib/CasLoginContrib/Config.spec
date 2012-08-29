@@ -25,3 +25,10 @@ $Foswiki::cfg{CAS}{LogoutFromCAS} = $FALSE;
 # specify the SSL ciphers to use when contacting the CAS server
 #    if you are having SSL connection issues, setting this to 'SSLv3' may help
 $Foswiki::cfg{CAS}{SSL_version} = '';
+
+# **BOOLEAN**
+# Allow a user to log in to foswiki using the email addresses known to the password 
+# system.
+$Foswiki::cfg{CAS}{AllowLoginUsingEmailAddress} = 0;
+
+

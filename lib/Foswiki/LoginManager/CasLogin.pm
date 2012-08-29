@@ -87,26 +87,28 @@ sub loadSession {
     #print STDERR "hello : $authUser\n";
     #print STDERR "params: ".join(', ', $query->param())."\n";
     #print STDERR "uri: $uri\n";
-    #print STDERR "relative ".$query->url(-relative=>1);                    
-    #print STDERR "full ".$query->url(-full=>1);                    
-    #print STDERR "query ".$query->url(-query=>1);                    
+    #print STDERR "relative ".$query->url(-relative=>1);
+    #print STDERR "full ".$query->url(-full=>1);
+    #print STDERR "query ".$query->url(-query=>1);
     #check returned ticket
     if ( defined($ticket) ) {
         $uri =~ s/[?;&]ticket=.*$//;
         my $casUser = $this->{CAS}->validateST( $uri, $ticket );
         if ($casUser) {
+            if (   $Foswiki::cfg{CAS}{AllowLoginUsingEmailAddress}
+                && $casUser =~ /@/ )
+            {
+                my $login = $foswiki->{users}->findUserByEmail($casUser);
+                $casUser = $login->[0] if ( defined( $login->[0] ) );
+            }
+
             $authUser = $casUser;
-            #        print STDERR "login? $authUser => $ticket\n";
-            #TODO: protect against auth as basemapper admin?
-
-       #if its an email address, we can make the generated wikiname more usefull
-            $authUser =~ s/(\.|@)(.)/$1.uc($2)/ge;
-            $authUser = ucfirst($authUser);
-
             $this->userLoggedIn($authUser);
-        } else {
-            # a bad ticket - so ignore
-            # its a bit difficult if its a resubmit of an old ticket to the login script :/
+        }
+        else {
+
+ # a bad ticket - so ignore
+ # its a bit difficult if its a resubmit of an old ticket to the login script :/
         }
     }
     else {
@@ -122,9 +124,10 @@ sub loadSession {
             if ( $foswiki->inContext('login') || $foswiki->inContext('logon') )
             {
                 if ( !$this->forceAuthentication() ) {
-                    my $full = $query->url(-full=>1);
+                    my $full = $query->url( -full => 1 );
                     $uri =~ s/^$full//;
-                    $uri = Foswiki::Func::getScriptUrl(undef, undef, 'view').$uri;
+                    $uri = Foswiki::Func::getScriptUrl( undef, undef, 'view' )
+                      . $uri;
                     $foswiki->redirect( $uri, 0 );
                 }
             }
