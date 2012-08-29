@@ -51,6 +51,7 @@ This is a re-write of the TWiki CASLogin work done by Greg Abbas, Charlie Reitsm
 |  Author(s): | Foswiki:Main.SvenDowideit |
 |  Copyright: | &copy; SvenDowideit@fosiki.com |
 |  License: | [[http://www.gnu.org/licenses/gpl.html][GPL 3 (Gnu General Public License)]] |
+|  Aug 2012 | 1.6.2 - Item12056: CasLogin shows template auth screen if a logged in user navigates to it |
 |  Aug 2012 | 1.6.1 - quick fix for Foswiki::Tasks.Item12054: recursion in CasLogin if access is denied to the user that has just logged in |
 |  Aug 2012 | initial release of the  third re-implementation |
 |  Release: | %$RELEASE% |

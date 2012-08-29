@@ -82,25 +82,32 @@ sub loadSession {
 
 # LoginManager::loadSession does a redirect on logout, so we have to deal with (CAS) logout before it.
     my $authUser = $this->SUPER::loadSession();
+    my $uri      = Foswiki::Func::getUrlHost() . $query->uri();
 
     #print STDERR "hello : $authUser\n";
     #print STDERR "params: ".join(', ', $query->param())."\n";
-    #print STDERR "uri: ".Foswiki::Func::getUrlHost().$query->uri()."\n";
+    #print STDERR "uri: $uri\n";
+    #print STDERR "relative ".$query->url(-relative=>1);                    
+    #print STDERR "full ".$query->url(-full=>1);                    
+    #print STDERR "query ".$query->url(-query=>1);                    
     #check returned ticket
     if ( defined($ticket) ) {
-        my $uri = Foswiki::Func::getUrlHost() . $query->uri();
         $uri =~ s/[?;&]ticket=.*$//;
-        $authUser = $this->{CAS}->validateST( $uri, $ticket );
-
-        #        print STDERR "login? $authUser => $ticket\n";
-        #TODO: protect against auth as basemapper admin?
+        my $casUser = $this->{CAS}->validateST( $uri, $ticket );
+        if ($casUser) {
+            $authUser = $casUser;
+            #        print STDERR "login? $authUser => $ticket\n";
+            #TODO: protect against auth as basemapper admin?
 
        #if its an email address, we can make the generated wikiname more usefull
-        $authUser =~ s/(\.|@)(.)/$1.uc($2)/ge;
-        $authUser = ucfirst($authUser);
+            $authUser =~ s/(\.|@)(.)/$1.uc($2)/ge;
+            $authUser = ucfirst($authUser);
 
-        $this->userLoggedIn($authUser);
-        my $origurl = $query->param('foswiki_origin');
+            $this->userLoggedIn($authUser);
+        } else {
+            # a bad ticket - so ignore
+            # its a bit difficult if its a resubmit of an old ticket to the login script :/
+        }
     }
     else {
         if (   defined( $query->param('sudo') )
@@ -112,8 +119,14 @@ sub loadSession {
             $this->userLoggedIn($authUser);
         }
         else {
-            if ( $foswiki->inContext('login') ) {
-                $this->forceAuthentication();
+            if ( $foswiki->inContext('login') || $foswiki->inContext('logon') )
+            {
+                if ( !$this->forceAuthentication() ) {
+                    my $full = $query->url(-full=>1);
+                    $uri =~ s/^$full//;
+                    $uri = Foswiki::Func::getScriptUrl(undef, undef, 'view').$uri;
+                    $foswiki->redirect( $uri, 0 );
+                }
             }
         }
     }
@@ -133,8 +146,11 @@ Triggered on auth fail
 sub forceAuthentication {
     my $this    = shift;
     my $session = $this->{session};
+    my $query   = $session->{request};
 
-    if ( !$session->inContext('authenticated') && !defined($query->param('ticket'))) {
+    if (   !$session->inContext('authenticated')
+        && !defined( $query->param('ticket') ) )
+    {
         $session->redirect( $this->loginUrl(), 0 );
         return 1;
     }
