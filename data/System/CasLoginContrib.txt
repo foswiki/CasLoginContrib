@@ -16,9 +16,11 @@ Uses JA-SIG [[Wikipedia:Central_Authentication_Service][CAS]] Single Sign On inf
 
 If the user has already authenticated at the SSO, the user will not need to enter their password again.
 
-This Authentication infrastructure can be coupled together with an external User mapper such as Foswiki:Extensions.LdapContrib, allowing foswiki to 'outsource' its user details.
+This Authentication infrastructure can be coupled together with an external 
+User mapper such as Foswiki:Extensions.LdapContrib, allowing foswiki to 'outsource' its user details.
 
-To activate it, you will specify =Foswiki::LoginManager::CasLogin= in the security setup section of [[%SCRIPTURL{"configure"}%][configure]], and set the ={CAS}= specific settings.
+To activate it, you will specify =Foswiki::LoginManager::CasLogin= in the 
+security setup section of [[%SCRIPTURL{"configure"}%][configure]], and set the ={CAS}= specific settings.
 
 ---+++ Notes
 Don't forget to get get the CAS server's =https= =ssl= certificate, and add its path into =configure= : in the ={CAS}{CAFile}= setting.
@@ -51,6 +53,7 @@ This is a re-write of the TWiki CASLogin work done by Greg Abbas, Charlie Reitsm
 |  Author(s): | Foswiki:Main.SvenDowideit |
 |  Copyright: | &copy; SvenDowideit@fosiki.com |
 |  License: | [[http://www.gnu.org/licenses/gpl.html][GPL 3 (Gnu General Public License)]] |
+|  Sep 2012 | fix up ={CAS}{LogoutFromCAS}= - sadly, the browser is directed to the CAS logout page, and there's no info for the user to return |
 |  Aug 2012 | 1.6.2 - Item12056: CasLogin shows template auth screen if a logged in user navigates to it |
 |  Aug 2012 | 1.6.1 - quick fix for Foswiki::Tasks.Item12054: recursion in CasLogin if access is denied to the user that has just logged in |
 |  Aug 2012 | initial release of the  third re-implementation |

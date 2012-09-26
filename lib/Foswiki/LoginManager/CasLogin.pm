@@ -75,9 +75,12 @@ sub loadSession {
 
     if ( $query->param('logout') && $Foswiki::cfg{CAS}{LogoutFromCAS} ) {
 
-#can't redirect browser to logout from CAS, as the CAS server does not return to service URL
-#$foswiki->redirect($this->logoutUrl(), 0);
-        $this->{CAS}->callCAS( $this->logoutUrl() );
+        $this->userLoggedIn( $Foswiki::cfg{DefaultUserLogin} );
+        $foswiki->redirect( $this->logoutUrl(), 0 );
+
+#can't callCAS - this only happens in the background from foswiki server, and does not result in a CAS logout
+#presumably because the logout must be initiated by the user
+#$this->{CAS}->callCAS( $this->logoutUrl() );
     }
 
 # LoginManager::loadSession does a redirect on logout, so we have to deal with (CAS) logout before it.
