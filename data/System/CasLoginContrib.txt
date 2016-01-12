@@ -53,13 +53,13 @@ This is a re-write of the TWiki CASLogin work done by Greg Abbas, Charlie Reitsm
 |  Author(s): | Foswiki:Main.SvenDowideit |
 |  Copyright: | &copy; SvenDowideit@fosiki.com |
 |  License: | [[http://www.gnu.org/licenses/gpl.html][GPL 3 (Gnu General Public License)]] |
+|  Jan 2016 | 1.6.4 - Item13919: fix default user to be used as determined by engine (Foswiki:Main.JanKrueger) |
 |  Sep 2012 | fix up ={CAS}{LogoutFromCAS}= - sadly, the browser is directed to the CAS logout page, and there's no info for the user to return |
 |  Aug 2012 | 1.6.2 - Item12056: CasLogin shows template auth screen if a logged in user navigates to it |
 |  Aug 2012 | 1.6.1 - quick fix for Foswiki::Tasks.Item12054: recursion in CasLogin if access is denied to the user that has just logged in |
 |  Aug 2012 | initial release of the  third re-implementation |
 |  Release: | %$RELEASE% |
 |  Version: | %$VERSION% |
-|  Change History: | <!-- versions below in reverse order -->&nbsp; |
 |  Dependencies: | %$DEPENDENCIES% |
 |  Home page: | http://foswiki.org/bin/view/Extensions/CasLoginContrib |
 |  Support: | http://foswiki.org/bin/view/Support/CasLoginContrib |
