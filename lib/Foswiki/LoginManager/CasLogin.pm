@@ -84,7 +84,7 @@ sub loadSession {
     }
 
 # LoginManager::loadSession does a redirect on logout, so we have to deal with (CAS) logout before it.
-    my $authUser = $this->SUPER::loadSession();
+    my $authUser = $this->SUPER::loadSession(@_);
     my $uri      = Foswiki::Func::getUrlHost() . $query->uri();
 
     #print STDERR "hello : $authUser\n";
